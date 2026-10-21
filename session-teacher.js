@@ -1169,6 +1169,7 @@
       renderParticipants(snapshot.participants || [],snapshot.responses || [],snapshot.progress || [],snapshot);
       renderStudentInspector(snapshot);
       await renderCourseControl(snapshot);
+      await renderStandaloneClassificationTeacher(snapshot);
       await renderEvidenceTeacherControl(snapshot);
       ActivityModules?.invoke?.("teacher", activeSession.activityMode, "renderControl", snapshot);
       renderConfidenceControl(snapshot);
@@ -1356,7 +1357,11 @@
     if (!responses.length && (questionPosts.length || questionReplies.length)) return;
 
     if (!responses.length) {
-      detail.insertAdjacentHTML("beforeend",'<div class="empty-v15">這位學生目前還沒有作答紀錄。</div>');
+      const isClassGroup=activeSession?.activityMode==='classification-board' &&
+        resolveTeacherClassificationActivity(activeSession)?.collaboration==='group';
+      detail.insertAdjacentHTML("beforeend",isClassGroup
+        ? '<div class="empty-v15">目前是小組分類模式，分類依據與理由儲存在小組成果中。請點選上方「查看分類成果與理由」，檢視每組完整內容。</div>'
+        : '<div class="empty-v15">這位學生目前還沒有作答紀錄。</div>');
       return;
     }
 
@@ -1365,6 +1370,28 @@
       const head=document.createElement("div");head.className="student-response-detail-head";
       head.innerHTML=`<strong>${escapeHtml(responseModeLabel(response.mode))} · ${escapeHtml(responseStageLabel(response))}</strong><small>${escapeHtml(formatTime(response.submitted_at))}</small>`;
       const body=document.createElement("div");body.className="student-response-detail-body";
+
+      // RC3: classification boards store multiple groups and reasons in payload.board,
+      // not selected_type / payload.reason. The generic inspector must use the same
+      // detailed teacher-only renderer as the Course results panel.
+      if(response.mode==="classification-board"){
+        const submittedBoard=response?.payload?.board;
+        const classificationSource=resolveTeacherClassificationActivity(activeSession);
+        if(submittedBoard && window.ClassificationTeacherResults?.render){
+          window.ClassificationTeacherResults.render(body,[{
+            key:`inspect-${participant.id}`,
+            label:`學生 ${participant.student_code||'未命名'}`,
+            board:submittedBoard
+          }],classificationSource||{assets:[]},{showMatrix:false,scope:`inspector:${activeSession?.id}:${participant.id}`});
+        }else{
+          const notice=document.createElement('div');notice.className='empty-v15';
+          notice.textContent=submittedBoard
+            ? '已收到分類作答，但成果介面尚未載入。請確認分類成果相關 JavaScript 檔案已部署。'
+            : '已收到作答紀錄，但沒有分類群組資料；請確認學生端送出的是分類成果。';
+          body.append(notice);
+        }
+        card.append(head,body);detail.appendChild(card);return;
+      }
 
       const customInspectorFields=ActivityModules?.invoke?.("teacher",response?.mode,"inspectorFields",response,snapshot);
       if (Array.isArray(customInspectorFields)) {
@@ -1815,6 +1842,98 @@
       host.append(groupArea);
     }
     panel.append(host);
+  }
+
+  // RC3: standalone sessions created in the teacher workspace previously had only
+  // a legacy individual inspector. Read the same teacher snapshot / group-scoped
+  // teacher RPC already used elsewhere; no SQL changes or student-side publication.
+  function resolveTeacherClassificationActivity(session){
+    if(session?.moduleData?.classificationBoard?.assets) return session.moduleData.classificationBoard;
+    if(session?.moduleData?.assets && session?.activityMode==='classification-board')return session.moduleData;
+    try{
+      const decoded=typeof session?.activityEncoded==='string'
+        ? JSON.parse(session.activityEncoded) : session?.activityEncoded;
+      const value=decoded?.activity||decoded?.moduleData?.classificationBoard;
+      return value?.assets ? value : null;
+    }catch{return null;}
+  }
+
+  let standaloneClassificationRenderSerial=0;
+  async function renderStandaloneClassificationTeacher(snapshot){
+    const panel=$("classificationStandaloneTeacherPanel");
+    const action=$("openStandaloneClassificationResultsBtn");
+    if(!panel)return;
+    const session=activeSession;
+    const enabled=session?.activityMode==='classification-board' && session?.sessionKind!=='course';
+    panel.classList.toggle('hidden',!enabled);
+    if(action)action.hidden=!enabled;
+    if(!enabled){++standaloneClassificationRenderSerial;return;}
+    const host=$("classificationStandaloneResults");
+    const ticket=++standaloneClassificationRenderSerial;
+    let source=resolveTeacherClassificationActivity(session);
+    if(!source && session.mode==='cloud' && window.ClassificationSession?.teacherActivity){
+      try{
+        // Cloud teacher history / handoff metadata omits activityEncoded.
+        // This existing teacher-token RPC restores the original immutable assets.
+        const remote=await window.ClassificationSession.teacherActivity(session);
+        if(ticket!==standaloneClassificationRenderSerial||activeSession!==session)return;
+        if(remote?.assets){
+          source=remote;
+          session.moduleData={...(session.moduleData||{}),classificationBoard:remote};
+          if(inspectedParticipantId && latestTeacherSnapshot===snapshot)renderStudentInspector(snapshot);
+        }
+      }catch(error){
+        if(ticket!==standaloneClassificationRenderSerial||activeSession!==session)return;
+        host.replaceChildren();
+        const warning=document.createElement('p');warning.className='ci-class-results-warning';
+        warning.textContent=`無法恢復分類活動設定：${error.message||'請確認教師權限與網路連線'}。請按「更新分類成果」重試。`;
+        host.append(warning);return;
+      }
+    }
+    if(!source){
+      host.replaceChildren();
+      const warning=document.createElement('p');warning.className='ci-class-results-warning';
+      warning.textContent='無法讀取此分類 Session 的素材設定，請先重新整理教師 Session，再查看成果。';
+      host.append(warning);return;
+    }
+    const node='';
+    const ownResponses=(snapshot?.responses||[]).filter(r=>
+      r.mode==='classification-board' && r.stage_key==='final' &&
+      (r.node_ref||'')===node && r.payload?.board?.activityId===source.id);
+    let records=ownResponses.map((r,i)=>({
+      key:r.participant_id||`person-${i}`,
+      label:r.student_code?`學生 ${r.student_code}`:`個人 ${i+1}`,
+      board:r.payload.board
+    }));
+    if(source.collaboration==='group'){
+      if(session.mode!=='cloud'){
+        records=[];
+      }else{
+        let groups;
+        try{groups=await window.ClassificationSession.teacherGroups({...session,currentNodeRef:node});}
+        catch(error){
+          if(ticket!==standaloneClassificationRenderSerial||activeSession!==session)return;
+          host.replaceChildren();
+          const warning=document.createElement('p');warning.className='ci-class-results-warning';
+          warning.textContent=`無法讀取小組成果：${error.message||'請確認教師權限與網路連線'}。請按「更新分類成果」重試。`;
+          host.append(warning);return;
+        }
+        records=(groups||[]).filter(g=>g.board?.activityId===source.id)
+          .map((g,i)=>({key:g.group_id||`group-${i}`,label:g.group_label||`小組 ${i+1}`,board:g.board}));
+      }
+    }
+    if(ticket!==standaloneClassificationRenderSerial||activeSession!==session)return;
+    if(!window.ClassificationTeacherResults?.render)throw Error('分類成果檢視元件未載入，請確認網站檔案完整部署');
+    window.ClassificationTeacherResults.render(host,records,source,{
+      showMatrix:true,scope:`standalone:${session.id}`
+    });
+    if(action){
+      action.onclick=()=>{
+        if(activeSession!==session)return;
+        panel.scrollIntoView({behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches?'auto':'smooth',block:'start'});
+        $("classificationStandaloneTitle")?.focus({preventScroll:true});
+      };
+    }
   }
 
   async function renderClassificationCourseTeacher(snapshot,activityResource){
@@ -3647,6 +3766,11 @@
   $("openDeliberationHistoryProjectionBtn")?.addEventListener("click",()=>openDeliberationPresentation("history"));
   $("deliberationHistoryIdentityMode")?.addEventListener("change",()=>{if(latestTeacherSnapshot)renderDeliberationControl(latestTeacherSnapshot);});
   $("deliberationNextBtn")?.addEventListener("click",nextDeliberationLayer);
+  $("refreshStandaloneClassificationBtn")?.addEventListener("click",()=>{
+    if(activeSession?.activityMode!=='classification-board'||activeSession.sessionKind==='course')return;
+    refreshActiveSession().catch(error=>showSessionToast(error.message||'分類成果更新失敗'));
+  });
+
   $("studentInspectSelect")?.addEventListener("change",event=>{
     inspectedParticipantId=String(event.target.value || "");
     if (latestTeacherSnapshot) renderStudentInspector(latestTeacherSnapshot);

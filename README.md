@@ -1,6 +1,7 @@
-> **RC2 教師分類成果檢視改版**：Course 控制台新增快捷鍵，每位學生／每組成果按類別清楚顯示素材、分類依據與全文理由；獨立分類 Session 也改善檢視入口。詳見 `README-V3-RC2.md`。
+> **RC3 修正重點**：教師首頁建立的「獨立自由分類 Session」新增完整成果區，個別學生檢視也能讀取多個類別的素材與理由；重新開啟雲端 Session 時會在教師權限下還原原始分類素材。詳見 `README-V3-RC3.md`。
+> RC2 的 Course 分類成果與獨立分類頁面改進繼續保留。
 
-# Classroom Interactive v3.0.0 RC2｜測試站專用
+# Classroom Interactive v3.0.0 RC3｜測試站專用
 
 這是從 v2.36.6 合併 v1.0.1 的「自由分類與比較」與「證據導向判斷」模組而成的**前端整合候選版**，不代表正式穩定版。
 
@@ -22,3 +23,5 @@
 - 若確認用戶端失敗，回報錯誤資訊時請先遮蔽 Session token、API key、學生個資。
 
 完整 QA 見 `tests/QA-V3.0.0-RC1-FRONTEND-INTEGRATION.md`。
+
+RC3 專項測試報告：`tests/QA-V3.0.0-RC3-CLASSIFICATION-INSPECTOR.md`。

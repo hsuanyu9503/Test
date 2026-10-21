@@ -5,37 +5,37 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>課堂互動工具｜教師工作台</title>
   <link rel="icon" href="favicon.ico" sizes="any" />
-  <link rel="stylesheet" href="app.css?v=3.0.0-rc2" />
-  <link rel="stylesheet" href="interface-polish.css?v=3.0.0-rc2" />
-  <link rel="stylesheet" href="classification-board-editor.css?v=3.0.0-rc2" />
-  <link rel="stylesheet" href="classification-teacher-results.css?v=3.0.0-rc2" />
-  <link rel="stylesheet" href="evidence-judgment-editor.css?v=3.0.0-rc2" />
-  <link rel="stylesheet" href="theme-v2.36.5.css?v=3.0.0-rc2" />
-  <link rel="stylesheet" href="live-stance-v2.36.6.css?v=3.0.0-rc2" />
+  <link rel="stylesheet" href="app.css?v=3.0.0-rc3" />
+  <link rel="stylesheet" href="interface-polish.css?v=3.0.0-rc3" />
+  <link rel="stylesheet" href="classification-board-editor.css?v=3.0.0-rc3" />
+  <link rel="stylesheet" href="classification-teacher-results.css?v=3.0.0-rc3" />
+  <link rel="stylesheet" href="evidence-judgment-editor.css?v=3.0.0-rc3" />
+  <link rel="stylesheet" href="theme-v2.36.5.css?v=3.0.0-rc3" />
+  <link rel="stylesheet" href="live-stance-v2.36.6.css?v=3.0.0-rc3" />
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js" defer></script>
-  <script src="activity-modules.js?v=3.0.0-rc2" defer></script>
-  <script src="classification-core.js?v=3.0.0-rc2" defer></script>
-  <script src="evidence-judgment-core.js?v=3.0.0-rc2" defer></script>
-  <script src="classification-session.js?v=3.0.0-rc2" defer></script>
-  <script src="session-api.js?v=3.0.0-rc2" defer></script>
-  <script src="course-parallel-groups.js?v=3.0.0-rc2" defer></script>
-  <script src="teacher-core.js?v=3.0.0-rc2" defer></script>
-  <script src="classification-board-editor.js?v=3.0.0-rc2" defer></script>
-  <script src="evidence-judgment-editor.js?v=3.0.0-rc2" defer></script>
-  <script src="activity-editor.js?v=3.0.0-rc2" defer></script>
-  <script src="editor-guidance.js?v=3.0.0-rc2" defer></script>
-  <script src="live-stance-motion.js?v=3.0.0-rc2" defer></script>
-  <script src="deliberation-history.js?v=3.0.0-rc2" defer></script>
-  <script src="classification-teacher-results.js?v=3.0.0-rc2" defer></script>
-  <script src="session-teacher.js?v=3.0.0-rc2" defer></script>
-  <script src="release-center.js?v=3.0.0-rc2" defer></script>
+  <script src="activity-modules.js?v=3.0.0-rc3" defer></script>
+  <script src="classification-core.js?v=3.0.0-rc3" defer></script>
+  <script src="evidence-judgment-core.js?v=3.0.0-rc3" defer></script>
+  <script src="classification-session.js?v=3.0.0-rc3" defer></script>
+  <script src="session-api.js?v=3.0.0-rc3" defer></script>
+  <script src="course-parallel-groups.js?v=3.0.0-rc3" defer></script>
+  <script src="teacher-core.js?v=3.0.0-rc3" defer></script>
+  <script src="classification-board-editor.js?v=3.0.0-rc3" defer></script>
+  <script src="evidence-judgment-editor.js?v=3.0.0-rc3" defer></script>
+  <script src="activity-editor.js?v=3.0.0-rc3" defer></script>
+  <script src="editor-guidance.js?v=3.0.0-rc3" defer></script>
+  <script src="live-stance-motion.js?v=3.0.0-rc3" defer></script>
+  <script src="deliberation-history.js?v=3.0.0-rc3" defer></script>
+  <script src="classification-teacher-results.js?v=3.0.0-rc3" defer></script>
+  <script src="session-teacher.js?v=3.0.0-rc3" defer></script>
+  <script src="release-center.js?v=3.0.0-rc3" defer></script>
 </head>
 <body class="teacher-page v15-page">
   <header class="topbar v15-topbar">
     <div>
       <div class="workspace-brandline">
         <p id="workflowEyebrow" class="eyebrow">CLASSROOM INTERACTIVE</p>
-        <span class="workspace-version">V3.0.0 RC2</span>
+        <span class="workspace-version">V3.0.0 RC3</span>
       </div>
       <h1>課堂互動工具</h1>
       <p id="workflowSubtitle" class="subtle">先整理教材與活動，再把它們編排成完整課程。</p>
@@ -1209,6 +1209,7 @@
           <div class="active-session-actions">
             <button id="exportTeacherHandoffBtn" class="btn btn-secondary hidden" type="button">🔁 匯出接手檔</button>
             <button id="exportDeliberationResultsBtn" class="btn btn-secondary hidden" type="button">⬇ 匯出思辨結果</button>
+            <button id="openStandaloneClassificationResultsBtn" class="btn btn-primary" type="button" hidden aria-controls="classificationStandaloneTeacherPanel">📋 查看分類成果與理由</button>
             <button id="refreshSessionBtn" class="btn btn-secondary" type="button">↻ 更新資料</button>
             <button id="closeSessionBtn" class="btn btn-danger-soft" type="button">結束 Session</button>
           </div>
@@ -1555,6 +1556,20 @@
           </details>
         </section>
 
+        <section id="classificationStandaloneTeacherPanel" class="ci-class-teacher-panel ci-class-standalone-panel hidden" aria-labelledby="classificationStandaloneTitle">
+          <div class="ci-class-teacher-head">
+            <div>
+              <span class="ci-class-teacher-kicker">教師專用 · 即時分類成果</span>
+              <h3 id="classificationStandaloneTitle" tabindex="-1">自由分類｜學生與小組完整作答</h3>
+              <p class="ci-class-teacher-note">依學生／小組逐筆顯示類別、歸入素材、共同特徵和分類理由。此區不會公開到學生端或投影。</p>
+            </div>
+            <button id="refreshStandaloneClassificationBtn" class="btn btn-secondary" type="button">↻ 更新分類成果</button>
+          </div>
+          <div id="classificationStandaloneResults" class="ci-class-results-host" aria-live="polite">
+            <div class="empty-v15">正在取得分類作答…</div>
+          </div>
+        </section>
+
         <details class="session-participants-section session-participants-details">
           <summary class="session-section-head session-participants-summary">
             <div>
@@ -1572,7 +1587,7 @@
             <div class="student-inspector-head">
               <div>
                 <span class="summary-label">個別學生檢視</span>
-                <strong>查看特定學生的選項與理由</strong>
+                <strong>查看特定學生的選項、分類依據與理由</strong>
                 <small>僅教師端可見，不會同步到學生或投影畫面。</small>
               </div>
               <label class="student-inspector-select-wrap" for="studentInspectSelect">

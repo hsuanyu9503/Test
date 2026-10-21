@@ -48,3 +48,17 @@
 #openClassificationResultsBtn[hidden]{display:none!important}
 #openTeacherSubmissions{background:#e6edff;color:#35489f;font-weight:850;border-color:#9eafe6}
 @media(max-width:600px){.ci-class-result-chevron{font-size:0}.ci-class-result-chevron::after{font-size:17px}.ci-class-teacher-panel{padding:14px}.ci-class-result-heading{padding:13px}.ci-class-result-detail{padding:0 10px 12px}.ci-class-category{padding:12px}.ci-class-results-view-controls{justify-content:flex-start}}
+
+/* RC3: in-session classification teacher visibility and individual inspector */
+.ci-class-standalone-panel{margin:22px 0 26px;scroll-margin-top:18px}
+.ci-class-standalone-panel.hidden{display:none!important}
+#openStandaloneClassificationResultsBtn{border-color:#8a9ee6;background:#e5ebff;color:#283c91;font-weight:850;box-shadow:0 2px 9px rgba(69,84,159,.1)}
+#openStandaloneClassificationResultsBtn[hidden]{display:none!important}
+#openStandaloneClassificationResultsBtn:not([hidden]):focus-visible{outline:3px solid #677ed6;outline-offset:3px}
+#classificationStandaloneResults{margin-top:8px}
+.ci-class-inspector-body{display:block;min-width:0}
+.student-response-detail-body:has(.ci-class-results-list) {display:block;min-width:0}
+.student-response-detail-body .ci-class-results-summary{margin:0 0 10px}
+.student-response-detail-body .ci-class-result-detail{grid-template-columns:minmax(0,1fr)}
+.ci-class-results-warning{color:#8e4b22;background:#fff6e8;border:1px solid #f0d3ac;border-radius:12px;padding:14px}
+@media(max-width:600px){#openStandaloneClassificationResultsBtn{width:100%}.ci-class-standalone-panel{margin:16px 0}.ci-class-standalone-panel .ci-class-teacher-head>.btn{width:100%}}
