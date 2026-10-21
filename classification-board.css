@@ -1,0 +1,52 @@
+:root{font-family:system-ui,'Noto Sans TC',sans-serif;color:#253453;background:#f3f6fc}*{box-sizing:border-box}body{margin:0}button,input,textarea,select{font:inherit}button{cursor:pointer;border:1px solid #cfd8ed;background:white;color:#354775;border-radius:11px;padding:10px 14px;min-height:42px}button.primary{background:#5958c9;border-color:#5958c9;color:white}button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid #81a3ff}button:disabled{opacity:.5;cursor:not-allowed}header{background:linear-gradient(110deg,#eef0ff,#e8f8f3);border-bottom:1px solid #dce4f2;padding:22px max(16px,calc((100vw - 1200px)/2))}h1{margin:0 0 4px;font-size:clamp(22px,4vw,34px)}h2{font-size:20px;margin:0 0 12px}h3{font-size:16px;margin:0 0 8px}.hint{color:#63728c;font-size:14px;line-height:1.65}main{max-width:1200px;margin:20px auto;padding:0 16px 50px}.card{background:white;border:1px solid #dce3f0;border-radius:20px;padding:20px;margin-bottom:16px;box-shadow:0 7px 22px #273d610a}.toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}.toolbar>*{min-width:0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px}.field{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600}.field input,.field textarea,.field select{width:100%;min-width:0;padding:10px;border:1px solid #cbd6e9;border-radius:10px;color:#243653;background:#fff}.field textarea{min-height:76px;resize:vertical}.row{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}.row label{display:flex;align-items:center;gap:5px}.subcard{padding:14px;border:1px solid #dbe3f2;border-radius:14px;background:#fbfcff;min-width:0}.asset{border:1px solid #d4dff2;background:#f7faff;border-radius:12px;padding:11px;margin:6px 0;overflow-wrap:anywhere}.asset img{width:100%;height:120px;object-fit:contain;margin-top:6px}.board{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:12px}.group{padding:14px;border-radius:15px;border:2px solid #d0def3;background:#fafcff;min-width:0}.group.dragover{border-color:#555acb;background:#eff1ff}.group h3{overflow-wrap:anywhere}.tag{font-size:12px;background:#e9eafd;color:#474ba6;padding:4px 9px;border-radius:99px}.notice{padding:12px;border-radius:12px;background:#fff8e8;border:1px solid #f5d89c;color:#795a26}.ok{background:#eaf7f1;border-color:#b0dfcb;color:#216b52}.hidden{display:none!important}table{border-collapse:collapse;width:100%;font-size:14px}th,td{padding:9px;border-bottom:1px solid #e0e6f1;text-align:left;vertical-align:top;overflow-wrap:anywhere}small{color:#68758e}footer{padding:24px;text-align:center;font-size:13px;color:#71809a}@media(max-width:520px){.card{padding:15px}.toolbar button{flex:1}.field textarea{min-height:70px}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+/* Stage 2 usability pass: touch sizing, text spacing, classification layouts */
+.field textarea{width:100%;border:1px solid #cbd6e9;border-radius:11px;padding:11px;line-height:1.6;color:#243653}
+.group{display:flex;flex-direction:column;gap:12px}
+.group-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:10px}
+.group-head>.field{flex:1;min-width:150px}
+.group-head .toolbar{margin:0}
+.group .items{display:flex;flex-direction:column;gap:8px;min-width:0}
+.group .items .hint{margin:0}
+.assigned-item{border:1px solid #e0e8f2;border-radius:12px;padding:8px;min-width:0}
+.assigned-item .asset{margin:0}
+.toolbar.compact{gap:6px}
+.toolbar.compact button{font-size:13px;padding:7px 10px;min-height:38px}
+.picker{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+.picker input{width:20px;height:20px;flex:none}
+.choice-line{display:flex;gap:10px;align-items:center;padding:7px 0;overflow-wrap:anywhere}
+.choice-line input{width:20px;height:20px;flex:none}
+.is-draggable{cursor:grab}
+.comparison-scroll{max-width:100%;overflow-x:auto;margin:14px 0 22px}
+.comparison-scroll table{min-width:520px}
+.comparison-scroll th:first-child{position:sticky;left:0;background:#f3f6fe;min-width:110px;z-index:1}
+.result-card{display:flex;flex-direction:column;gap:10px}
+.result-card .group p{margin:0}
+#assetsEditor{margin-top:12px}
+#assetsEditor .field{margin-top:8px}
+#batchAssets{max-width:100%;min-height:90px}
+@media(max-width:520px){
+  main{padding:0 12px 45px;margin:14px auto}
+  header{padding:20px 16px}
+  .card{padding:17px 15px;border-radius:17px}
+  .asset,.group,.subcard{padding:13px}
+  .field{line-height:1.5;overflow-wrap:anywhere}
+  .field input,.field select,.field textarea{min-height:44px}
+  .group-head{align-items:stretch}
+  .group-head>.field{flex-basis:100%}
+  .toolbar.compact button{flex:0 1 auto;min-width:50px}
+  .comparison-scroll{margin-right:-3px}
+}
+
+/* Keep the three primary view tabs readable on narrow touch screens. */
+nav.card.toolbar>button{flex:1 1 calc((100% - 24px)/3);min-width:0;white-space:nowrap;padding-inline:7px}
+nav.card.toolbar>#status{flex:1 1 100%;line-height:1.5}
+
+/* Session feedback and long teacher join URLs */
+#cloudTeacherInfo{overflow-wrap:anywhere;line-height:1.6;margin-top:14px}#cloudTeacherInfo a{color:#3b50a1;font-weight:700}#cloudStudentInfo{margin-bottom:14px}#cloudTeacherPanel .toolbar{margin:10px 0}
+
+/* Course iframe: do not duplicate the parent Course masthead. */
+body.course-classification-student header,body.course-classification-student footer{display:none}
+body.course-classification-student main{max-width:none;padding:12px}
+body.course-classification-student .card{margin-bottom:12px}
+/* Stage 2 R6 published anonymous comparison */
+#coursePublishedPanel .published-matrix{border-collapse:collapse;min-width:540px;width:100%;font-size:.9rem}#coursePublishedPanel .published-matrix th,#coursePublishedPanel .published-matrix td{padding:10px;border:1px solid #dfe3f0;text-align:left;vertical-align:top;white-space:normal}#coursePublishedPanel .published-result-card{padding:12px;border:1px solid #e1e5f0;border-radius:12px;margin-top:10px;overflow-wrap:anywhere}#coursePublishedPanel .comparison-scroll{overflow:auto;max-width:100%}
