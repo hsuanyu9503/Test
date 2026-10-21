@@ -1042,7 +1042,7 @@
     if (!config?.url || !config?.key) throw new Error("找不到目前的 Supabase 雲端設定");
     requirePublicCloudKey(config.key);
     return {
-      schema:"classroom-teacher-handoff", version:1, appVersion:"3.0.0-rc3", exportedAt:new Date().toISOString(),
+      schema:"classroom-teacher-handoff", version:1, appVersion:"3.0.0-rc4", exportedAt:new Date().toISOString(),
       warning:"此檔案可轉移教師 Session 控制權，請勿傳給學生或公開分享。",
       cloud:{url:config.url,key:config.key},
       session:{

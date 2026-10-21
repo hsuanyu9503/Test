@@ -1,4 +1,4 @@
-/* v3.0.0 RC2 — shared, teacher-only display of submitted classification boards.
+/* v3.0.0 RC4 — shared, teacher-only display of submitted classification boards.
  * Presentation only: it never mutates, sends, or publishes student answers. */
 (function (root) {
   'use strict';
@@ -8,7 +8,12 @@
     if (label !== undefined) node.textContent = String(label);
     return node;
   };
-  const openStates = new Map(); // preserve teacher expansion while snapshots refresh
+  // Keep disclosure state by Session/Node scope, across polling and Realtime rerenders.
+  // The comparison matrix is a <details> too; RC3 only remembered result-card states.
+  const openStates = new Map();
+  const matrixOpenStates = new Map();
+  const matrixScrollStates = new Map();
+  const hostScopes = new WeakMap();
   const list = value => Array.isArray(value) ? value : [];
   const safeText = value => String(value ?? '').trim();
 
@@ -17,6 +22,22 @@
     const rows = list(submissions);
     const assets = list(source?.assets);
     const assetMap = new Map(assets.map((a, i) => [String(a.id), { ...a, position:i + 1 }]));
+    const scopeKey = String(scope);
+    // Read the live DOM synchronously before replacing it. <details> toggle events
+    // are asynchronous; otherwise a refresh can win the race with the last click.
+    if (hostScopes.get(host) === scopeKey) {
+      const preservedCards = openStates.get(scopeKey) || new Map();
+      host.querySelectorAll('.ci-class-result-item[data-result-key]').forEach(detail => {
+        preservedCards.set(detail.dataset.resultKey, detail.open);
+      });
+      openStates.set(scopeKey, preservedCards);
+      const previousMatrix = host.querySelector('.ci-class-matrix-wrap');
+      if (previousMatrix) {
+        matrixOpenStates.set(scopeKey, previousMatrix.open);
+        matrixScrollStates.set(scopeKey, previousMatrix.querySelector('.ci-class-matrix-scroll')?.scrollLeft || 0);
+      }
+    }
+    hostScopes.set(host, scopeKey);
     host.replaceChildren();
     const overview = make('div', 'ci-class-results-summary');
     const text = make('div', 'ci-class-results-summary-text');
@@ -32,8 +53,8 @@
     expand.type = collapse.type = 'button';
     const cards = make('div', 'ci-class-results-list');
     const allDetails = [];
-    const state = openStates.get(scope) || new Map();
-    openStates.set(scope,state);
+    const state = openStates.get(scopeKey) || new Map();
+    openStates.set(scopeKey,state);
     expand.addEventListener('click', () => allDetails.forEach(d => { d.open = true; }));
     collapse.addEventListener('click', () => allDetails.forEach(d => { d.open = false; }));
     controls.append(expand,collapse);
@@ -47,7 +68,7 @@
       const resultKey = String(record?.key ?? record?.label ?? idx);
       detail.dataset.resultKey = resultKey;
       detail.open = state.has(resultKey) ? state.get(resultKey) : idx === 0;
-      detail.addEventListener('toggle', () => state.set(resultKey, detail.open));
+      detail.addEventListener('toggle', () => { if (host.contains(detail)) state.set(resultKey, detail.open); });
       allDetails.push(detail);
       const heading = make('summary', 'ci-class-result-heading');
       heading.append(make('span', 'ci-class-result-index', String(idx + 1)));
@@ -100,6 +121,10 @@
 
     if (showMatrix && assets.length) {
       const matrix = make('details','ci-class-matrix-wrap');
+      matrix.open = matrixOpenStates.get(scopeKey) === true;
+      matrix.addEventListener('toggle', () => {
+        if (host.contains(matrix)) matrixOpenStates.set(scopeKey, matrix.open);
+      });
       matrix.append(make('summary','ci-class-matrix-summary','展開素材歸屬比較表（跨成果對照）'));
       const scroller = make('div','ci-class-matrix-scroll');
       const table = make('table','r5-classification-matrix');
@@ -120,6 +145,7 @@
         body.append(tr);
       }
       table.append(body); scroller.append(table); matrix.append(scroller); host.append(matrix);
+      scroller.scrollLeft = matrixScrollStates.get(scopeKey) || 0;
     }
   }
   root.ClassificationTeacherResults = Object.freeze({ render });
