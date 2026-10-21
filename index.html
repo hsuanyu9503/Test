@@ -5,35 +5,37 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>課堂互動工具｜教師工作台</title>
   <link rel="icon" href="favicon.ico" sizes="any" />
-  <link rel="stylesheet" href="app.css?v=3.0.0-rc1" />
-  <link rel="stylesheet" href="interface-polish.css?v=3.0.0-rc1" />
-  <link rel="stylesheet" href="classification-board-editor.css?v=3.0.0-rc1" />
-  <link rel="stylesheet" href="evidence-judgment-editor.css?v=3.0.0-rc1" />
-  <link rel="stylesheet" href="theme-v2.36.5.css?v=3.0.0-rc1" />
-  <link rel="stylesheet" href="live-stance-v2.36.6.css?v=3.0.0-rc1" />
+  <link rel="stylesheet" href="app.css?v=3.0.0-rc2" />
+  <link rel="stylesheet" href="interface-polish.css?v=3.0.0-rc2" />
+  <link rel="stylesheet" href="classification-board-editor.css?v=3.0.0-rc2" />
+  <link rel="stylesheet" href="classification-teacher-results.css?v=3.0.0-rc2" />
+  <link rel="stylesheet" href="evidence-judgment-editor.css?v=3.0.0-rc2" />
+  <link rel="stylesheet" href="theme-v2.36.5.css?v=3.0.0-rc2" />
+  <link rel="stylesheet" href="live-stance-v2.36.6.css?v=3.0.0-rc2" />
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js" defer></script>
-  <script src="activity-modules.js?v=3.0.0-rc1" defer></script>
-  <script src="classification-core.js?v=3.0.0-rc1" defer></script>
-  <script src="evidence-judgment-core.js?v=3.0.0-rc1" defer></script>
-  <script src="classification-session.js?v=3.0.0-rc1" defer></script>
-  <script src="session-api.js?v=3.0.0-rc1" defer></script>
-  <script src="course-parallel-groups.js?v=3.0.0-rc1" defer></script>
-  <script src="teacher-core.js?v=3.0.0-rc1" defer></script>
-  <script src="classification-board-editor.js?v=3.0.0-rc1" defer></script>
-  <script src="evidence-judgment-editor.js?v=3.0.0-rc1" defer></script>
-  <script src="activity-editor.js?v=3.0.0-rc1" defer></script>
-  <script src="editor-guidance.js?v=3.0.0-rc1" defer></script>
-  <script src="live-stance-motion.js?v=3.0.0-rc1" defer></script>
-  <script src="deliberation-history.js?v=3.0.0-rc1" defer></script>
-  <script src="session-teacher.js?v=3.0.0-rc1" defer></script>
-  <script src="release-center.js?v=3.0.0-rc1" defer></script>
+  <script src="activity-modules.js?v=3.0.0-rc2" defer></script>
+  <script src="classification-core.js?v=3.0.0-rc2" defer></script>
+  <script src="evidence-judgment-core.js?v=3.0.0-rc2" defer></script>
+  <script src="classification-session.js?v=3.0.0-rc2" defer></script>
+  <script src="session-api.js?v=3.0.0-rc2" defer></script>
+  <script src="course-parallel-groups.js?v=3.0.0-rc2" defer></script>
+  <script src="teacher-core.js?v=3.0.0-rc2" defer></script>
+  <script src="classification-board-editor.js?v=3.0.0-rc2" defer></script>
+  <script src="evidence-judgment-editor.js?v=3.0.0-rc2" defer></script>
+  <script src="activity-editor.js?v=3.0.0-rc2" defer></script>
+  <script src="editor-guidance.js?v=3.0.0-rc2" defer></script>
+  <script src="live-stance-motion.js?v=3.0.0-rc2" defer></script>
+  <script src="deliberation-history.js?v=3.0.0-rc2" defer></script>
+  <script src="classification-teacher-results.js?v=3.0.0-rc2" defer></script>
+  <script src="session-teacher.js?v=3.0.0-rc2" defer></script>
+  <script src="release-center.js?v=3.0.0-rc2" defer></script>
 </head>
 <body class="teacher-page v15-page">
   <header class="topbar v15-topbar">
     <div>
       <div class="workspace-brandline">
         <p id="workflowEyebrow" class="eyebrow">CLASSROOM INTERACTIVE</p>
-        <span class="workspace-version">V3.0.0 RC1</span>
+        <span class="workspace-version">V3.0.0 RC2</span>
       </div>
       <h1>課堂互動工具</h1>
       <p id="workflowSubtitle" class="subtle">先整理教材與活動，再把它們編排成完整課程。</p>
@@ -1292,6 +1294,7 @@
               <div class="progressive-control-actions">
                 <button id="previousCourseNodeBtn" class="btn btn-secondary" type="button">← 上一步</button>
                 <button id="openCoursePresentationBtn" class="btn btn-secondary" type="button">🖥️ 開啟投影畫面</button>
+                <button id="openClassificationResultsBtn" class="btn btn-primary" type="button" hidden aria-controls="classificationCourseTeacherPanel">📋 查看分類提交與理由</button>
                 <button id="nextCourseNodeBtn" class="btn btn-primary" type="button">下一步 →</button>
               </div>
               <div id="presentationControlBar" class="presentation-control-bar">

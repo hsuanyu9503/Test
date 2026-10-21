@@ -1821,22 +1821,37 @@
     let panel=$("classificationCourseTeacherPanel");
     if(!panel){
       panel=document.createElement("section");panel.id="classificationCourseTeacherPanel";
-      panel.className="card hidden";
+      panel.className="card hidden ci-class-teacher-panel";
       const coursePanel=$("courseSessionControl");coursePanel?.after(panel);
     }
-    if(activeSession?.activityMode!=="classification-board" || !activityResource){panel.classList.add("hidden");return;}
+    if(activeSession?.activityMode!=="classification-board" || !activityResource){
+      panel.classList.add("hidden");panel.dataset.renderKey="";panel._refreshClassification=null;
+      const shortcut=$("openClassificationResultsBtn");if(shortcut)shortcut.hidden=true;return;
+    }
     panel.classList.remove("hidden");
     const session=activeSession, node=session.currentNodeRef;
     const activity=activityResource.moduleData?.classificationBoard;
+    const renderKey=`${session.id}:${node}:${activity?.id||''}`;
+    // Keep the teacher's expanded cards and scroll position during ordinary realtime polling.
+    if(panel.dataset.renderKey===renderKey && panel._refreshClassification){
+      await panel._refreshClassification();return;
+    }
+    panel.dataset.renderKey=renderKey;
+    panel._refreshClassification=null;
     panel.replaceChildren();
-    const title=document.createElement("h3");title.textContent="自由分類｜目前 Node 成果";panel.append(title);
-    const note=document.createElement("p");note.className="subtle";note.textContent="顯示匿名分類結構及理由；與其他 Node 的資料互相隔離。";panel.append(note);
+    const head=document.createElement("div");head.className="ci-class-teacher-head";
+    const titles=document.createElement("div");
+    const kicker=document.createElement("span");kicker.className="ci-class-teacher-kicker";kicker.textContent="學生作答紀錄 · 僅教師可檢視";
+    const title=document.createElement("h3");title.tabIndex=-1;title.textContent="自由分類｜學生／小組提交成果";
+    const note=document.createElement("p");note.className="ci-class-teacher-note";
+    note.textContent="依照每位學生或每個小組，完整顯示類別名稱、歸入素材，以及共同特徵和理由；切換課程 Node 時彼此隔離。";
+    titles.append(kicker,title,note);head.append(titles);panel.append(head);
     if(session.mode!=="cloud"||!activity){panel.append(document.createTextNode("分類 Course 需雲端 Session 與有效設定"));return;}
-    const buttons=document.createElement("div");buttons.className="row";
+    const buttons=document.createElement("div");buttons.className="ci-class-teacher-actions";
     const reload=document.createElement("button");reload.className="btn btn-secondary";reload.textContent="更新分類成果";reload.type="button";
     const group=document.createElement("button");group.className="btn btn-secondary";group.textContent="為本節點分組（每組約 4 人）";group.type="button";
     group.hidden=activity.collaboration!=="group";
-    const output=document.createElement("div");output.className="comparison-scroll";
+    const output=document.createElement("div");output.className="ci-class-results-host";output.setAttribute("aria-live","polite");
     // Stage 2 R6: teacher-only publication. The default is hidden even if the UI fails to load.
     const publishBox=document.createElement("div");publishBox.className="r6-publication-bar";
     const publishLabel=document.createElement("strong");publishLabel.textContent="學生端成果公開";
@@ -1869,53 +1884,33 @@
       }catch(e){showSessionToast(e.message||"更新成果公布失敗");await refreshPublication().catch(()=>{});}
       finally{if(activeSession===session&&activeSession.currentNodeRef===node)publishButton.disabled=false;}
     };
+    let latestRefresh=0;
     async function refresh(){
       if(activeSession!==session||activeSession.currentNodeRef!==node)return;
+      const sequence=++latestRefresh;
       const snap=await window.ClassroomSessionAPI.teacherSnapshot(session);
       let rows=(snap.responses||[]).filter(r=>r.mode==="classification-board"&&r.stage_key==="final"&&
         (r.node_ref||"")===node&&r.payload?.board?.activityId===activity.id)
-        .map((r,i)=>({label:`個人 ${i+1}`,board:r.payload.board}));
+        .map((r,i)=>({key:r.participant_id||`person-${i}`,label:r.student_code?`學生 ${r.student_code}`:`個人 ${i+1}`,board:r.payload.board}));
       if(activity.collaboration==="group"){
         const remote=await window.ClassificationSession.teacherGroups({...session,currentNodeRef:node});
-        rows=(remote||[]).filter(r=>r.board?.activityId===activity.id).map((r,i)=>({label:`小組 ${i+1}`,board:r.board}));
+        rows=(remote||[]).filter(r=>r.board?.activityId===activity.id).map((r,i)=>({key:r.group_id||`group-${i}`,label:r.group_label||`小組 ${i+1}`,board:r.board}));
       }
-      if(activeSession!==session||activeSession.currentNodeRef!==node)return;
-      output.replaceChildren();
-      const summary=document.createElement("p");summary.textContent=`已收到 ${rows.length} 份分類成果`;output.append(summary);
-      if(rows.length){
-        const comparison=document.createElement("table");comparison.className="r5-classification-matrix";
-        const header=document.createElement("thead"),headerRow=document.createElement("tr");
-        for(const title of ["素材",...rows.map(x=>x.label)]){
-          const cell=document.createElement("th");cell.textContent=title;headerRow.append(cell);
-        }
-        header.append(headerRow);comparison.append(header);
-        const body=document.createElement("tbody");
-        for(const asset of activity.assets||[]){
-          const row=document.createElement("tr"),head=document.createElement("th");head.textContent=asset.label||"圖片素材";row.append(head);
-          for(const result of rows){
-            const groups=(result.board.memberships||[]).filter(m=>m.assetId===asset.id)
-              .map(m=>result.board.groups?.find(g=>g.id===m.groupId)?.name||"未命名分類");
-            const cell=document.createElement("td");cell.textContent=groups.join("、")||"未分類";row.append(cell);
-          }
-          body.append(row);
-        }
-        comparison.append(body);const scroller=document.createElement("div");
-        scroller.className="r5-classification-matrix-scroll";scroller.append(comparison);output.append(scroller);
-      }
-      for(const result of rows){
-        const item=document.createElement("article");item.className="subcard";
-        const heading=document.createElement("h4");heading.textContent=result.label;item.append(heading);
-        for(const g of result.board.groups||[]){
-          const line=document.createElement("p");
-          const names=(result.board.memberships||[]).filter(m=>m.groupId===g.id)
-            .map(m=>activity.assets.find(a=>a.id===m.assetId)?.label||"圖片素材");
-          line.textContent=`${g.name}：${names.join("、")||"尚無素材"}${g.reason?`｜理由：${g.reason}`:""}`;
-          item.append(line);
-        }
-        output.append(item);
-      }
+      if(activeSession!==session||activeSession.currentNodeRef!==node||panel.dataset.renderKey!==renderKey||sequence!==latestRefresh)return;
+      if(!window.ClassificationTeacherResults?.render)throw Error("無法載入分類成果詳情介面，請確認新版網站檔案已完整部署");
+      window.ClassificationTeacherResults.render(output,rows,activity,{showMatrix:true,scope:`${session.id}:${node}`});
     }
     reload.onclick=()=>refresh().catch(error=>showSessionToast(error.message));
+    const goToResults=$("openClassificationResultsBtn");
+    if(goToResults){
+      goToResults.hidden=false;
+      goToResults.onclick=()=>{
+        if(activeSession!==session||activeSession.currentNodeRef!==node)return;
+        panel.scrollIntoView({behavior:window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches?"auto":"smooth",block:"start"});
+        title.focus({preventScroll:true});
+        reload.click();
+      };
+    }
     group.onclick=async()=>{
       if(!confirm("確定為這個分類 Node 自動分組？已有小組成果時不可重新分組。"))return;
       try{
@@ -1925,8 +1920,9 @@
         await refresh();showSessionToast("分類小組已更新");
       }catch(error){showSessionToast(error.message||"分組失敗");}
     };
+    panel._refreshClassification=refresh;
     await Promise.all([refresh(),refreshPublication().catch(error=>{
-      publishInfo.textContent="成果公布功能未啟用：請先執行 R6 增量 SQL";
+      publishInfo.textContent="成果公布狀態無法讀取，請檢查測試資料庫與權限";
       publishButton.disabled=true;
     })]);
   }

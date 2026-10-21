@@ -222,9 +222,18 @@
     for(const m of matrix){const tr=document.createElement('tr');tr.append(el('th',m.assetLabel));m.assignments.forEach(name=>tr.append(el('td',name)));body.append(tr)}table.append(body);
     $('comparisonMatrix').append(el('h3','相同素材在不同成果中的分類方式'),table);
     for(const [i,r] of results.entries()){const c=div('subcard result-card');c.append(el('h3',author(r,i)),el('small',new Date(r.submittedAt).toLocaleString('zh-TW')));
-      for(const g of r.groups||[]){const group=div('group');group.append(el('strong',g.name),el('p',g.reason||'未填寫理由','hint'));
+      for(const [j,g] of (r.groups||[]).entries()){
+        const group=div('group ci-class-category');
+        const title=div('ci-class-category-header');title.append(el('span',`分類 ${j+1}`,'ci-class-category-number'),el('h4',g.name||'未命名分類'));group.append(title);
         const assetLabels=(r.memberships||[]).filter(m=>m.groupId===g.id).map(m=>r.assets?.find(a=>a.id===m.assetId)?.label||'圖片素材');
-        group.append(el('p',assetLabels.join('、')||'沒有素材'));c.append(group)}$('resultBoards').append(c)}
+        const assets=div('ci-class-category-assets');assets.append(el('strong',`歸入素材（${assetLabels.length}）`,'ci-class-category-label'));
+        const chips=div('ci-class-asset-list');
+        if(!assetLabels.length)chips.append(el('span','這個類別沒有素材','ci-class-asset-empty'));
+        assetLabels.forEach(a=>chips.append(el('span',a,'ci-class-asset-chip')));assets.append(chips);group.append(assets);
+        const reason=div('ci-class-category-reason');reason.append(el('strong','共同特徵／分類依據與理由','ci-class-category-label'));
+        reason.append(el('p',g.reason?.trim()||'未填寫理由',g.reason?.trim()?'ci-class-reason-text':'ci-class-reason-empty'));
+        group.append(reason);c.append(group)
+      }$('resultBoards').append(c)}
   }
   function openView(v){view=v;['teacher','student','compare'].forEach(k=>{$(k+'View').classList.toggle('hidden',k!==v);$(k+'Tab').classList.toggle('primary',k===v)});
     if(v==='teacher')renderTeacher();if(v==='student')renderStudent();if(v==='compare'){renderCompare();if(teacherSession&&!teacherRefreshBusy)refreshTeacherResults().catch(e=>message(e.message||'同步失敗'));}}
@@ -489,6 +498,7 @@
       if(view==='compare')await refreshTeacherResults();}
       catch(e){message(e.message||'分組失敗');}};
     $('refreshCloudResults').onclick=async()=>{try{openView('compare');await refreshTeacherResults();}catch(e){message(e.message||'更新失敗');}};
+    $('openTeacherSubmissions')?.addEventListener('click',()=>openView('compare'));
     $('exportActivity').onclick=()=>{configUpdate();download('classification-activity.json',activity)};
     $('exportResults').onclick=()=>download('classification-results.json',{schemaVersion:2,activityId:(teacherActivity||activity).id,results:teacherSession?(cloudResults||[]):resultsForActivity()});
     $('importActivity').addEventListener('change',async event=>{const file=event.target.files?.[0];if(!file)return;
