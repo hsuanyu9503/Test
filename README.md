@@ -1,3 +1,15 @@
+# Classroom Interactive v3.0.0 RC4.1 — 同步畫面穩定性與 Supabase 10/30 相容修補
+
+> **僅供獨立 GitHub Pages／Supabase 測試環境驗收。** 保留 RC4 的功能與資料格式。
+
+這次修復：教師端相同成果的重複 DOM 重建；證據／小組資料未取得前清空畫面；重複抓取 Course 教師快照造成額外請求。同步方式仍為 Realtime + 輪詢備援，沒有擅自關閉即時更新。
+
+SQL：`sql/EXISTING-TEST-PROJECT-2026-10-30-SAFE-DEFAULTS.sql` 用於已有資料的測試庫，僅調整 postgres 未來 public 新物件的預設權限；`sql/QA-2026-10-30-PERMISSIONS-READONLY.sql` 為唯讀稽核；`sql/NEW-PROJECT-ONLY-v2.36.1-schema-unified-fixed.sql` 已加入 10/30 安全預設，但**只適合全新空白測試庫，且不包含 Stage 2/3 後續八份 migration**。請勿重跑到現有測試／正式庫。
+
+部署與驗收：`README-V3-RC4.1.md`。正式 Supabase 權限與多人實測尚未由本地工具驗證。
+
+---
+
 # Classroom Interactive v3.0.0 RC4
 
 > 修正教師端「跨成果對照」在定時同步後自動收合的問題。詳見 `README-V3-RC4.md`。
@@ -29,3 +41,7 @@
 完整 QA 見 `tests/QA-V3.0.0-RC1-FRONTEND-INTEGRATION.md`。
 
 RC3 專項測試報告：`tests/QA-V3.0.0-RC3-CLASSIFICATION-INSPECTOR.md`。
+
+
+## Supabase 2026-10-30 相容性修補（RC4.1）
+參閱 `sql/README-2026-10-30-COMPATIBILITY.md`。SQL 路徑請擇一，前端程式維持 RC4.1 不變。

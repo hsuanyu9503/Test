@@ -743,6 +743,14 @@
     const courses = window.ClassroomCourseAPI?.list?.() || [];
     const activities = window.ClassroomActivityAPI?.list?.() || [];
     const history = window.ClassroomSessionAPI?.loadTeacherHistory?.() || [];
+    const homeSignature=JSON.stringify([
+      courses.map(c=>[c.id,c.title,c.lessonCount,c.updatedAt,c.updated_at]),
+      activities.map(a=>[a.id,a.title,a.template,a.taskCount,a.updatedAt,a.updated_at]),
+      history.map(h=>[h.id,h.status,h.participantCount,h.responseCount,h.title,h.createdAt])
+    ]);
+    const sessionViewVisible=document.querySelector('[data-workspace-view="sessions"]')?.classList.contains("active");
+    if(sessionViewVisible && courseList.dataset.homeSignature===homeSignature && courseList.firstChild && activityList.firstChild)return;
+    courseList.dataset.homeSignature=homeSignature;
     const activeHistory = history.filter(item => item.status === "active");
 
     $("teachHistorySessionCount").textContent = String(history.length);
@@ -1204,8 +1212,13 @@
   function renderParticipants(participants,responses=[],progress=[],snapshot=null) {
     const list = $("sessionParticipantList");
     const select = $("studentInspectSelect");
-    list.innerHTML = "";
     const sorted=participants.slice().sort((a,b)=>String(a.student_code).localeCompare(String(b.student_code),"zh-Hant",{numeric:true}));
+    // Preserve focused controls and card DOM on unchanged polling snapshots.
+    const fingerprint=JSON.stringify([activeSession?.id,activeSession?.currentNodeRef,
+      activeSession?.sessionKind,activeSession?.activityMode,sorted,responses,progress]);
+    if(list.dataset.renderFingerprint===fingerprint && list.firstChild)return;
+    list.dataset.renderFingerprint=fingerprint;
+    list.innerHTML = "";
 
     if (select) {
       const previous=inspectedParticipantId || select.value || "";
@@ -1506,8 +1519,12 @@
       select.dataset.signature=signature;
     }
     select.value=selected.id;select.disabled=groups.length===1||activeSession.status==="closed";
-    const box=$("courseParallelGroupButtons");box.replaceChildren();
-    selected.nodeRefs.forEach((ref,i)=>{
+    const box=$("courseParallelGroupButtons");
+    const buttonSignature=JSON.stringify([sessionKey,currentRef,selected.id,sessionKey&&activeSession.status,
+      selected.nodeRefs.map(ref=>[ref,parallelNodeStatus(ref,snapshot),steps.find(st=>st.node.id===ref)?.node.title])]);
+    if(box.dataset.renderSignature!==buttonSignature){
+      box.replaceChildren();
+      selected.nodeRefs.forEach((ref,i)=>{
       const step=steps.find(st=>st.node.id===ref);
       if(!step)return;
       const status=parallelNodeStatus(ref,snapshot);
@@ -1522,7 +1539,9 @@
       go.disabled=ref===currentRef||activeSession.status==="closed";
       go.addEventListener("click",()=>switchConfiguredParallelGroupNode(selected.id,ref));
       item.append(info,go);box.appendChild(item);
-    });
+      });
+      box.dataset.renderSignature=buttonSignature;
+    }
     const currentStatus=parallelNodeStatus(currentRef,snapshot);
     const inside=selected.nodeRefs.includes(currentRef);
     $("courseParallelCurrentState").textContent=inside
@@ -1724,10 +1743,19 @@
       ($("courseSessionControl")||$("activeSessionCard"))?.after(panel);
     }
     const session=activeSession,node=session?.sessionKind==="course"?session.currentNodeRef:"";
-    if(!session||session.activityMode!=="evidence-judgment") {panel.classList.add("hidden");return;}
-    panel.classList.remove("hidden");panel.replaceChildren();
-    const heading=document.createElement("h3");heading.textContent="證據導向判斷｜教師階段與成果";panel.append(heading);
-    if(session.mode!=="cloud") {const p=document.createElement("p");p.textContent="此活動須使用 Supabase 雲端 Session。";panel.append(p);return;}
+    if(!session||session.activityMode!=="evidence-judgment") {
+      panel.classList.add("hidden");panel.dataset.evidenceSignature="";return;
+    }
+    const scope=`${session.id}:${node}`;
+    // On Node changes, don't display the previous Node's outcomes while the RPC is in flight.
+    if(panel.dataset.evidenceScope!==scope)panel.classList.add("hidden");
+    const draft=document.createElement("div");
+    const heading=document.createElement("h3");heading.textContent="證據導向判斷｜教師階段與成果";draft.append(heading);
+    if(session.mode!=="cloud") {
+      const p=document.createElement("p");p.textContent="此活動須使用 Supabase 雲端 Session。";
+      draft.append(p);panel.replaceChildren(...draft.childNodes);panel.classList.remove("hidden");return;
+    }
+    // Never empty a live teacher panel before network requests have completed.
     const state=await window.ClassroomSessionAPI.teacherEvidence(session,node);
     if(renderTicket!==evidenceTeacherRenderSerial || activeSession!==session ||
       (session.sessionKind==="course"&&session.currentNodeRef!==node))return;
@@ -1736,7 +1764,7 @@
     const steps=window.EvidenceJudgmentCore.steps(settings||{});
     const stage=Math.max(1,Number(state.current_stage)||1);
     const meta=document.createElement("p");meta.textContent=`目前階段：${{initial:"初步判斷",evidence:"證據說明",final:"再次判斷"}[steps[stage-1]]||"未知"}（${stage}/${steps.length}） · 參與學生 ${state.participant_count||0} 人`;
-    panel.append(meta);
+    draft.append(meta);
     const actions=document.createElement("div");actions.className="actions";
     for(let idx=0;idx<steps.length;idx++){
       const b=document.createElement("button");b.type="button";b.className="btn btn-secondary";
@@ -1749,7 +1777,7 @@
         catch(error){showSessionToast(error.message||"切換階段失敗");b.disabled=false;}
       });actions.append(b);
     }
-    panel.append(actions);
+    draft.append(actions);
     const rows=state.responses||[];
     if($("sessionResponseCount"))$("sessionResponseCount").textContent=String(rows.length);
     const host=document.createElement("div");host.className="r2-evidence-results";
@@ -1780,6 +1808,7 @@
       host.append(box);
     }
     const compare=window.EvidenceJudgmentCore;
+    let groupSignature=null;
     if(settings?.initialEnabled!==false&&settings?.rejudgeEnabled!==false){
       let changed=0,retained=0;
       for(const person of new Set(rows.map(r=>r.participant_id))){
@@ -1800,11 +1829,11 @@
         (session.sessionKind==='course'&&session.currentNodeRef!==node))return;
       if(String(groupState.node_ref||'')!==String(node||''))return;
       if(groupState.revision!=null&&state.revision!=null&&Number(groupState.revision)!==Number(state.revision)){
-        panel.replaceChildren();const warn=document.createElement('p');
-        warn.textContent='教師端資料正在更新，兩次同步的 Session 版本不同；下一輪將重新讀取，避免混用舊成果。';
-        panel.append(warn);return;
+        // Retry on the next snapshot; do not flash a blank panel during revision races.
+        return;
       }
       const groups=Array.isArray(groupState.groups)?groupState.groups:[];
+      groupSignature=[groupState.revision??null,groups];
       const detail=document.createElement('p');detail.textContent=`目前 ${groups.length} 組，已有 ${groups.filter(g=>g.submission).length} 組提交共同成果。`;
       groupArea.append(detail);
       if(!state.settled&&session.status==='active'){
@@ -1841,7 +1870,24 @@
       }
       host.append(groupArea);
     }
-    panel.append(host);
+    draft.append(host);
+    // Network is finished: only replace the visible DOM when rendered data changed.
+    const signature=JSON.stringify([scope,session.status,state.current_stage,state.participant_count,
+      state.settled,state.revision,settings,rows,groupSignature]);
+    if(panel.dataset.evidenceSignature!==signature || !panel.firstChild){
+      const oldGroupSize=panel.querySelector('select[aria-label="每組建議人數"]')?.value;
+      if(oldGroupSize){const selector=draft.querySelector('select[aria-label="每組建議人數"]');
+        if(selector)selector.value=oldGroupSize;}
+      // Keep teacher-expanded evidence descriptions across actual data changes.
+      const expanded=[...panel.querySelectorAll('.r2-evidence-results > .r2-evidence-stage details')]
+        .map(d=>d.open);
+      [...draft.querySelectorAll('.r2-evidence-results > .r2-evidence-stage details')]
+        .forEach((d,i)=>{if(i<expanded.length)d.open=expanded[i];});
+      panel.replaceChildren(...draft.childNodes);
+      panel.dataset.evidenceSignature=signature;
+    }
+    panel.dataset.evidenceScope=scope;
+    panel.classList.remove("hidden");
   }
 
   // RC3: standalone sessions created in the teacher workspace previously had only
@@ -1953,7 +1999,7 @@
     const renderKey=`${session.id}:${node}:${activity?.id||''}`;
     // Keep the teacher's expanded cards and scroll position during ordinary realtime polling.
     if(panel.dataset.renderKey===renderKey && panel._refreshClassification){
-      await panel._refreshClassification();return;
+      await panel._refreshClassification(snapshot);return;
     }
     panel.dataset.renderKey=renderKey;
     panel._refreshClassification=null;
@@ -2004,10 +2050,10 @@
       finally{if(activeSession===session&&activeSession.currentNodeRef===node)publishButton.disabled=false;}
     };
     let latestRefresh=0;
-    async function refresh(){
+    async function refresh(snapshotHint=null){
       if(activeSession!==session||activeSession.currentNodeRef!==node)return;
       const sequence=++latestRefresh;
-      const snap=await window.ClassroomSessionAPI.teacherSnapshot(session);
+      const snap=snapshotHint || await window.ClassroomSessionAPI.teacherSnapshot(session);
       let rows=(snap.responses||[]).filter(r=>r.mode==="classification-board"&&r.stage_key==="final"&&
         (r.node_ref||"")===node&&r.payload?.board?.activityId===activity.id)
         .map((r,i)=>({key:r.participant_id||`person-${i}`,label:r.student_code?`學生 ${r.student_code}`:`個人 ${i+1}`,board:r.payload.board}));
@@ -2040,7 +2086,7 @@
       }catch(error){showSessionToast(error.message||"分組失敗");}
     };
     panel._refreshClassification=refresh;
-    await Promise.all([refresh(),refreshPublication().catch(error=>{
+    await Promise.all([refresh(snapshot),refreshPublication().catch(error=>{
       publishInfo.textContent="成果公布狀態無法讀取，請檢查測試資料庫與權限";
       publishButton.disabled=true;
     })]);
@@ -3449,6 +3495,12 @@
   function renderHistory() {
     const list=$("sessionHistoryList");
     const history=window.ClassroomSessionAPI.loadTeacherHistory();
+    const historySignature=JSON.stringify(history.map(item=>[
+      item.id,item.status,item.title,item.code,item.mode,item.sessionKind,
+      item.participantCount,item.responseCount,item.createdAt
+    ]));
+    if(list.dataset.historySignature===historySignature && list.firstChild)return;
+    list.dataset.historySignature=historySignature;
     list.innerHTML="";
     if (!history.length) {
       list.innerHTML='<div class="empty-v15">還沒有建立過課堂 Session。</div>';

@@ -14,6 +14,8 @@
   const matrixOpenStates = new Map();
   const matrixScrollStates = new Map();
   const hostScopes = new WeakMap();
+  // Keep actual DOM nodes when a polling/Realtime snapshot contains no visual changes.
+  const hostRenderSignatures = new WeakMap();
   const list = value => Array.isArray(value) ? value : [];
   const safeText = value => String(value ?? '').trim();
 
@@ -23,6 +25,9 @@
     const assets = list(source?.assets);
     const assetMap = new Map(assets.map((a, i) => [String(a.id), { ...a, position:i + 1 }]));
     const scopeKey = String(scope);
+    const signature = JSON.stringify([rows, assets, Boolean(showMatrix)]);
+    if (hostScopes.get(host) === scopeKey && hostRenderSignatures.get(host) === signature && host.firstChild) return;
+    hostRenderSignatures.set(host, signature);
     // Read the live DOM synchronously before replacing it. <details> toggle events
     // are asynchronous; otherwise a refresh can win the race with the last click.
     if (hostScopes.get(host) === scopeKey) {
@@ -77,6 +82,13 @@
       info.append(make('small', '', `${groups.length} 個分類類別 · ${memberships.length} 筆素材歸屬`));
       heading.append(info);
       heading.append(make('span','ci-class-result-chevron','查看分類明細'));
+      // Store user intent synchronously: native <details> toggle is dispatched
+      // asynchronously and can race a near-immediate Realtime DOM replacement.
+      heading.addEventListener('click', event => {
+        event.preventDefault();
+        detail.open = !detail.open;
+        state.set(resultKey, detail.open);
+      });
       detail.append(heading);
       const content = make('div', 'ci-class-result-detail');
       if (!groups.length) content.append(make('p','ci-class-result-empty','已提交的內容沒有分類群組。'));
@@ -125,7 +137,13 @@
       matrix.addEventListener('toggle', () => {
         if (host.contains(matrix)) matrixOpenStates.set(scopeKey, matrix.open);
       });
-      matrix.append(make('summary','ci-class-matrix-summary','展開素材歸屬比較表（跨成果對照）'));
+      const matrixSummary=make('summary','ci-class-matrix-summary','展開素材歸屬比較表（跨成果對照）');
+      matrixSummary.addEventListener('click',event=>{
+        event.preventDefault();
+        matrix.open = !matrix.open;
+        matrixOpenStates.set(scopeKey,matrix.open);
+      });
+      matrix.append(matrixSummary);
       const scroller = make('div','ci-class-matrix-scroll');
       const table = make('table','r5-classification-matrix');
       const thead = make('thead');
